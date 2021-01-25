@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Script to ananlyze IPRAL L1a files"""
+"""Script to ananlyze IPRAL L1a files."""
 
 import datetime as dt
 from pathlib import Path
