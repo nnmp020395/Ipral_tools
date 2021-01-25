@@ -2,7 +2,7 @@
 
 ## installation
 
-Ces scripts sont faits pour être utilisés sur le mesocentre IPSL. Avant de les utiliser, il faut réaliser ces étapes.
+Ces scripts sont faits pour être utilisés sur le mesocentre IPSL. Avant de les utiliser, il faut réaliser ces étapes. Les chemins sont spécifiques à climserv pour une utilisation sur ciclad, il faut utilise le dossier `data` au lieu de `homedata`.
 
 ### Téléchargement des scripts
 
@@ -31,7 +31,7 @@ git clone https://gitlab.in2p3.fr/ipsl/sirta/ipral/ipral-tools.git
     conda create -p /homedata/your_user/python_envs/ipral_tools --file environment.yml
     ```
 
-### Utilisation de l'environnment python
+## Activer l'environnment python
 
 ```bash
 module load python/3.6-anaconda50
@@ -48,10 +48,20 @@ Ce script à partir de deux dates va checrcher tous les fichiers L1 IPRAL dispon
 - date de la dernière mesure
 - nombre de profils
 
-```
+```bash
 python ipral_file_infos.py yyyy-mm-dd1 yyyy-mm-dd2
 ```
 
 - `yyyy-mm-dd1`: première date à analyser
 - `yyyy-mm-dd1`: dernière date à analyser
 
+## ipral_1a_bck_corrected
+
+Ce script soustrait le fond de ciel des profils des données IPRAL 1a.
+
+```bash
+python ipral_1a_bck_corrected.py yyyy-mm-dd dossier_sortie
+```
+
+- `yyyy-mm-dd`: la date du fichier à traiter
+- `dossier_sortie` le dossier où enregistrer le fichier créé.
