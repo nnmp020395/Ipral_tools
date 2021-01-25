@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 import click
-import netCDF4 as nc
+import xarray as xr
 
 __author__ = "marc-antoine drouin"
 __email__ = "marc-antoine.drouin@lmd.ipsl.fr"
@@ -17,32 +17,9 @@ IPRAL_PATH = Path("/bdd/SIRTA/pub/basesirta/1a/ipral/")
 IPRAL_MASK = "ipral_1a_Lz1R15mF30sPbck_v01_*_000000_1440.nc"
 
 
-class DateParamType(click.ParamType):
-    """Implement a date type param for click package."""
-
-    name = "date"
-
-    def __init__(self, format):
-        """Add format of date."""
-        self.format = format
-
-    def convert(self, value, param, ctx):
-        """Convert date string into datetime object of possible."""
-        try:
-            date_dt = dt.datetime.strptime(value, self.format)
-        except ValueError:
-            self.fail(
-                "%s is not a valid date with format %s" % (value, self.format),
-                param,
-                ctx,
-            )
-
-        return date_dt
-
-
 @click.command()
-@click.argument("date_start", type=DateParamType("%Y-%m-%d"), nargs=1)
-@click.argument("date_end", type=DateParamType("%Y-%m-%d"), nargs=1)
+@click.argument("date_start", type=click.DateTime(formats=["%Y-%m-%d", "%Y%m%d"]))
+@click.argument("date_end", type=click.DateTime(formats=["%Y-%m-%d", "%Y%m%d"]))
 def analyze_ipral_file(date_start, date_end):
     """
     Analyze IPRAL L1a file.
@@ -71,13 +48,9 @@ def analyze_ipral_file(date_start, date_end):
         if not list_files:
             continue
 
-        nc_id = nc.Dataset(list_files[0])
-        time = nc.num2date(
-            nc_id.variables["time"][:],
-            units=nc_id.variables["time"].units,
-            only_use_cftime_datetimes=False,
+        time = (
+            xr.open_dataset(list_files[0])["time"].to_dataframe().index.to_pydatetime()
         )
-        nc_id.close()
 
         print(
             f"{list_files[0].name} {time[0]:%Y-%m-%dT%H:%M:%SZ} {time[-1]:%Y-%m-%dT%H:%M:%SZ} {time.size:4d}"  # NOQA
