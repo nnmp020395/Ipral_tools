@@ -38,6 +38,28 @@ module load python/3.6-anaconda50
 source activate /homedata/your_user/python_envs/ipral_tools
 ```
 
+## Liste des voies
+
+| channel | wavelength | mode          | telescope  | polarization  |
+|---------|------------|---------------|------------|---------------|
+| rcs_00  | 1064.0     | analog        | far field  | none          |
+| rcs_01  | 607.0      | photocounting | far field  | none          |
+| rcs_02  | 355.0      | analog        | far field  | parallel      |
+| rcs_03  | 355.0      | photocounting | far field  | parallel      |
+| rcs_04  | 355.0      | analog        | far field  | perpendicular |
+| rcs_05  | 355.0      | photocounting | far field  | perpendicular |
+| rcs_06  | 387.0      | analog        | far field  | none          |
+| rcs_07  | 387.0      | photocounting | far field  | none          |
+| rcs_08  | 408.0      | analog        | far field  | none          |
+| rcs_09  | 408.0      | photocounting | far field  | none          |
+| rcs_10  | 532.0      | analog        | far field  | none          |
+| rcs_11  | 532.0      | photocounting | far field  | none          |
+| rcs_12  | 355.0      | analog        | near_field | none          |
+| rcs_13  | 355.0      | photocounting | near_field | none          |
+| rcs_14  | 387.0      | analog        | near_field | none          |
+| rcs_15  | 387.0      | photocounting | near_field | none          |
+| rcs_16  | 532.0      | analog        | near_field | none          |
+| rcs_17  | 532.0      | photocounting | near_field | none          |
 
 ## ipral_file_infos.py
 
