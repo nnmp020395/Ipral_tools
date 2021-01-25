@@ -87,3 +87,15 @@ python ipral_1a_bck_corrected.py yyyy-mm-dd dossier_sortie
 
 - `yyyy-mm-dd`: la date du fichier à traiter
 - `dossier_sortie` le dossier où enregistrer le fichier créé.
+
+## ipral_chm15k_cloud_filter.py
+
+Ce script supprime les profils IPRAL contenant des nuages a une altitude inférieure à celle définie par l'utilisateur.
+
+```bash
+python ipral_chm15k_cloud_filter.py yyyy-mm-dd alt-max fichier_ipral fichier_sortie_nc
+```
+- `yyyy-mm-dd`: la date du fichier à traiter
+- `alt-max`: altitude maximale des nuages acceptés
+- `fichier_ipral`: chemin vers le fichier IPRAL
+- `fichier_sortie_nc`: le chemin du fichier netCDF contenant les données IPRAL filtrées.
