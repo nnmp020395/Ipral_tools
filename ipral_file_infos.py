@@ -80,7 +80,7 @@ def analyze_ipral_file(date_start, date_end):
         nc_id.close()
 
         print(
-            f"{list_files[0].name} {time[0]:%Y-%m-%dT%H:%M:%SZ} {time[-1]:%Y-%m-%dT%H:%M:%SZ} {time.size:4d}"
+            f"{list_files[0].name} {time[0]:%Y-%m-%dT%H:%M:%SZ} {time[-1]:%Y-%m-%dT%H:%M:%SZ} {time.size:4d}"  # NOQA
         )
 
     return 0
