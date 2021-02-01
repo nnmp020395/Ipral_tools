@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 
 import click
+import numpy as np
 import xarray as xr
 
 
@@ -117,7 +118,7 @@ def ipral_remove_cloud_profiles(date, alt_max, ipral_file, output):
     # only keep timesteps of CBH available in ipral data
     cbh = cbh.loc[ipral_time]
     # create to only keep data without cloud under the chosen altitude
-    cbh_mask = cbh > alt_max
+    cbh_mask = (cbh > alt_max) | np.isnan(cbh)
     profs_to_keep = cbh_mask.values.astype("i2").sum()
     print(f"{raw_profs - profs_to_keep} profiles will be remove")
 
