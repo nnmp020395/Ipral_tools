@@ -5,13 +5,13 @@ Script to remove IPRAL profiles with clouds.
 The script use data from SIRTA CHM15k and a maximum altitude
 of clouds defined by the user.
 """
-from pathlib import Path
+import datetime as dt
 import sys
+from pathlib import Path
 
 import click
 import numpy as np
 import xarray as xr
-
 
 __author__ = "marc-antoine drouin"
 __email__ = "marc-antoine.drouin@lmd.ipsl.fr"
@@ -27,6 +27,8 @@ IPRAL_MASK = "ipral_1a_Lz1R15mF30sPbck_v01_*_1440.nc"
 IPRAL_TIME_RES = "30s"
 
 DATE_FMT = "days since 1970-01-01T00:00:00"
+
+ONE_DAY = dt.timedelta(hours=23, minutes=59, seconds=59)
 
 
 def find_file(sirta_data_path, data_mask, date):
@@ -84,7 +86,7 @@ def ipral_remove_cloud_profiles(date, alt_max, ipral_file, output):
         The path to th eoutput file.
 
     """
-    print(f"Processing {date:%Y-%m%d}")
+    print(f"Processing {date:%Y-%m-%d}")
     print(f"Removing IPRAL profiles with clouds below {alt_max:7.1f}")
     # read CHM15k file
     # ---------------------------------------------------------------------------------
@@ -107,7 +109,7 @@ def ipral_remove_cloud_profiles(date, alt_max, ipral_file, output):
 
     # read IPRAL data
     # ---------------------------------------------------------------------------------
-    ipral_data = xr.open_dataset(ipral_file)
+    ipral_data = xr.open_dataset(ipral_file).sel(time=slice(date, date + ONE_DAY))
     raw_profs = ipral_data.time.size
     print(f"{raw_profs} in IPRAL data")
 
