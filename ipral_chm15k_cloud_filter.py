@@ -57,19 +57,19 @@ def find_file(sirta_data_path, data_mask, date):
     return data_files
 
 
-@click.command()
-@click.argument("date", type=click.DateTime(formats=["%Y-%m-%d", "%Y%m%d"]))
-@click.argument("alt-max", type=click.FLOAT)
-@click.argument(
-    "ipral_file",
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True
-    ),
-)
-@click.argument(
-    "output",
-    type=click.Path(file_okay=True, dir_okay=False, writable=True, resolve_path=True),
-)
+# @click.command()
+# @click.argument("date", type=click.DateTime(formats=["%Y-%m-%d", "%Y%m%d"]))
+# @click.argument("alt-max", type=click.FLOAT)
+# @click.argument(
+#     "ipral_file",
+#     type=click.Path(
+#         exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True
+#     ),
+# )
+# @click.argument(
+#     "output",
+#     type=click.Path(file_okay=True, dir_okay=False, writable=True, resolve_path=True),
+# )
 def ipral_remove_cloud_profiles(date, alt_max, ipral_file, output):
     """
     Remove IPRAL profiles containing cloud below a defined altitude.
