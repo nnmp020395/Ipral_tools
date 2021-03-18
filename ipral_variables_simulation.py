@@ -46,17 +46,19 @@ def variables_from_era(ipral_file):
     geopt = xr.open_dataset(GEOPT_PATH)
     ta = xr.open_dataset(TA_PATH)
     #----
-    print('-----CONVERT TIME-----')
+    print('-----CONVERT TIME AND LOCALISATION-----')
     # date_start = pd.to_datetime(time[0])
     # date_end = pd.to_datetime(time[-1])
     time = pd.to_datetime(time).strftime('%Y-%m-%dT%H:00:00.000000000')
     time = time.astype('datetime64[ns]')
     time_unique = np.unique(time)
+    LAT = geopt.latitude[np.where(np.abs(geopt.latitude.values - lat_ipral) <=0.25)[0][1]].values
+    LON = geopt.longitude[np.where(np.abs(geopt.longitude.values - lon_ipral) <=0.25)[0][1]].values
     #----
     from timeit import default_timer as timer
     TIME = timer()
-    geopt_for_ipral = geopt.sel(time=time_unique, latitude=lat_ipral, longitude=lon_ipral).to_dataframe()#['geopt']
-    ta_for_ipral = ta.sel(time=time_unique, latitude=lat_ipral, longitude=lon_ipral).to_dataframe()#['ta']
+    geopt_for_ipral = geopt.sel(time=time_unique, latitude=LAT, longitude=LON).to_dataframe()#['geopt']
+    ta_for_ipral = ta.sel(time=time_unique, latitude=LAT, longitude=LON).to_dataframe()#['ta']
     print(f'Time loading {timer()-TIME}')
     #----
     print('-----GETTING PRESSURE AND TEMPERATURE-----')
@@ -142,6 +144,7 @@ def interpolate_atb_mol(ipral_file, era):
         # alpha355_interp, alpha532_interp = np.append(alpha355_interp, np.array(f5(r))), np.append(alpha532_interp, np.array(f6(r)))
         # beta355_interp, beta532_interp = np.append(beta355_interp, np.array(f7(r))), np.append(beta532_interp, np.array(f8(r)))
         pression_interp, ta_interp = np.append(pression_interp, np.array(f9(r))), np.append(ta_interp, np.array(f10(r)))
+        print(str(t1))
     #------
     new_df = pd.DataFrame(index = new_index, data = np.array([pression_interp, ta_interp ,beta355mol_interp ,beta532mol_interp]).T, columns = columns_names[1:])
     #, beta355_interp ,beta532_interp ,alpha355_interp ,alpha532_interp ,tau355_interp ,tau532_interp

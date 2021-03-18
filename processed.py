@@ -30,17 +30,19 @@ input_year = '2020'
 data_dir = IPRAL_PATH / input_year
 list_files = sorted(data_dir.rglob(IPRAL_MASK))
 
-for lf in list_files[:5]:# '/bdd/SIRTA/pub/basesirta/1a/ipral/2019/05/14/ipral_1a_Lz1R15mF30sPbck_v01_20190514_000000_1440.nc'
+# for lf in list_files[:5]:# '/bdd/SIRTA/pub/basesirta/1a/ipral/2019/05/14/ipral_1a_Lz1R15mF30sPbck_v01_20190514_000000_1440.nc'
 # for lf, ax in zip(list_files[16:], axs.flatten()):
-    print(lf)
-    outdir_parent = "/homedata/nmpnguyen/IPRAL/1a"
-    date = dt.datetime.strptime(lf.name.split('_')[4], '%Y%m%d')  
-    out_filter = outdir_parent / Path(re.sub(lf.name.split('_')[2], 'cloud_filter', lf.name))
-    ipral_remove_cloud_profiles(date, 3700, lf, out_filter)
-    # out_bck = Path(re.sub('cloud_filter','bck_corrected',str(out_filter))) #outdir_parent / Path('_'.join(index)) 
-    # convert_rcs(lf, date, out_bck)
-    simul_df = simulate(out_filter, 'era')
-    rAv, rcs17atb, rcs13atb, sr17, sr13, beta355molAv, beta532molAv, time=get_calibration(out_filter, simul_df)
+lf = Path('/bdd/SIRTA/pub/basesirta/1a/ipral/2020/09/14/ipral_1a_Lz1R15mF30sPbck_v01_20200914_000000_1440.nc')
+
+print(lf)
+outdir_parent = "/homedata/nmpnguyen/IPRAL/1a"
+date = dt.datetime.strptime(lf.name.split('_')[4], '%Y%m%d')  
+out_filter = outdir_parent / Path(re.sub(lf.name.split('_')[2], 'cloud_filter', lf.name))
+ipral_remove_cloud_profiles(date, 3700, lf, out_filter)
+# out_bck = Path(re.sub('cloud_filter','bck_corrected',str(out_filter))) #outdir_parent / Path('_'.join(index)) 
+# convert_rcs(lf, date, out_bck)
+simul_df = simulate(out_filter, 'era')
+rAv, rcs17atb, rcs13atb, sr17, sr13, beta355molAv, beta532molAv, time=get_calibration(out_filter, simul_df)
     
     # get_calib_plot(rcs17atb, beta532molAv, rcs13atb, beta355molAv, time, rAv, out_filter, 532)
     # get_calib_plot(rcs17atb, beta532molAv, rcs13atb, beta355molAv, time, rAv, out_filter, 355)
