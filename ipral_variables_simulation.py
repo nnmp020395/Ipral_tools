@@ -9,7 +9,7 @@ from argparse import Namespace, ArgumentParser
 # import click
 import numpy as np
 import pandas as pd
-
+from tqdm import tqdm
 __version__ = "0.1.0"
 
 
@@ -127,7 +127,7 @@ def interpolate_atb_mol(ipral_file, era):
     new_index = pd.MultiIndex.from_product([timeIpral, r], names = ['time', 'range'])
     # df_new = pd.DataFrame(index = new_index, columns = era.columns)
     print('-----INTERPOLATE ATTENUATED BACKSCATTERING FROM ERA5-----')
-    for t1 in time_tmp:
+    for t1 in tdqm(time_tmp):
         a = era.loc[pd.IndexSlice[:, t1], columns_names]
         f1 = spi.interp1d(a['altitude'], a['beta355mol'], kind = 'linear', bounds_error=False, fill_value="extrapolate")
         f2 = spi.interp1d(a['altitude'], a['beta532mol'], kind = 'linear', bounds_error=False, fill_value="extrapolate")
