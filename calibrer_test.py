@@ -50,6 +50,69 @@ def get_calib_plot(rcs17atb, beta532molAv, rcs13atb, beta355molAv, time, rAv, ip
         out_png = Path('/homedata/nmpnguyen/IPRAL/1a_Fig', ipral_file.stem + '_532sr.png')
     plt.savefig(out_png)
 
+"""
+Fontionc init et add sont pour détecter le pic du signal, donc détecter les nuages, aérosols
+"""
+
+def init(
+    x,
+    lag,
+    threshold,
+    influence,
+    ):
+    '''
+    Smoothed z-score algorithm
+    Implementation of algorithm from https://stackoverflow.com/a/22640362/6029703
+    '''
+    labels = np.zeros(lag)
+    filtered_y = np.array(x[0:lag])
+    avg_filter = np.zeros(lag)
+    std_filter = np.zeros(lag)
+    var_filter = np.zeros(lag)
+    avg_filter[lag - 1] = np.mean(x[0:lag])
+    std_filter[lag - 1] = np.std(x[0:lag])
+    var_filter[lag - 1] = np.var(x[0:lag])
+    return dict(avg=avg_filter[lag - 1], var=var_filter[lag - 1],
+                std=std_filter[lag - 1], filtered_y=filtered_y,
+                labels=labels)
+
+
+def add(result, 
+    single_value,
+    lag,
+    threshold,
+    influence,
+    ):
+    previous_avg = result['avg']
+    previous_var = result['var']
+    previous_std = result['std']
+    filtered_y = result['filtered_y']
+    labels = result['labels']
+    if abs(single_value - previous_avg) > threshold * previous_std:
+        if single_value > previous_avg:
+            labels = np.append(labels, 1)
+        else:
+            labels = np.append(labels, -1)
+        # calculate the new filtered element using the influence factor
+        filtered_y = np.append(filtered_y, influence * single_value
+                               + (1 - influence) * filtered_y[-1])
+    else:
+        labels = np.append(labels, 0)
+        filtered_y = np.append(filtered_y, single_value)
+    # update avg as sum of the previuos avg + the lag * (the new calculated item - calculated item at position (i - lag))
+    current_avg_filter = previous_avg + 1. / lag * (filtered_y[-1]
+            - filtered_y[len(filtered_y) - lag - 1])
+    # update variance as the previuos element variance + 1 / lag * new recalculated item - the previous avg -
+    current_var_filter = previous_var + 1. / lag * ((filtered_y[-1]
+            - previous_avg) ** 2 - (filtered_y[len(filtered_y) - 1
+            - lag] - previous_avg) ** 2 - (filtered_y[-1]
+            - filtered_y[len(filtered_y) - 1 - lag]) ** 2 / lag)  # the recalculated element at pos (lag) - avg of the previuos - new recalculated element - recalculated element at lag pos ....
+    # calculate standard deviation for current element as sqrt (current variance)
+    current_std_filter = np.sqrt(current_var_filter)
+    return dict(avg=current_avg_filter, var=current_var_filter,
+                std=current_std_filter, filtered_y=filtered_y[1:],
+                labels=labels)
+
 
 def get_calibration(ipral_file, simul_df):
     # from timeit import default_timer as timer
@@ -87,16 +150,32 @@ def get_calibration(ipral_file, simul_df):
     rcs13av.columns = r[::8]
     beta532molAv.columns = r[::8]
     beta355molAv.columns = r[::8]
-    # sr17 = pd.DataFrame(data= sr17.groupby(np.arange(len(sr17.columns))//8, axis=1).mean(), columns=r[::8])
-    # sr13 = pd.DataFrame(data= sr13.groupby(np.arange(len(sr13.columns))//8, axis=1).mean(), columns=r[::8])
-    # rcs17atb = pd.DataFrame(data= rcs17atb.groupby(np.arange(len(rcs17atb.columns))//8, axis=1).mean(), columns= r[::8])
-    # rcs13atb = pd.DataFrame(data= rcs13atb.groupby(np.arange(len(rcs13atb.columns))//8, axis=1).mean(), columns= r[::8])
     rAv = r[::8]
     print('AVERAGE-------------------------------end')
+    # PEAK DETECTION
+    r_id = np.where(rAv <= 5000)[0]
+    time_mask = []
+    id_mask = []
+    for t in range(time.size):
+        profil1 = rcs17av.iloc[t,r_id].values
+        lag = 5
+        threshold = 5
+        influence = 0.5
+        m=0
+        result = init(profil1, lag=lag, threshold=threshold, influence=influence)
+        for line in profil1:
+            result = add(result, line, lag, threshold, influence)
+        if (len(np.where(result['labels']==1)[0]) != 0):
+            print(time[t])
+            time_mask.append(time[t])
+            id_mask.append(t)
+    #---------        
+    rcs17av_new = np.array(rcs17av, copy=True)
+    rcs17av_new[id_mask,:] = np.nan
     # NORMALIZATION-------------------------
     z_cc = np.where((rAv>3700)&(rAv<4000))[0]
-    constk = rcs17av.iloc[:,z_cc].div(beta532molAv.iloc[:,z_cc]).mean(axis=1) 
-    rcs17atb = rcs17av.div(constk, axis=0)
+    constk = rcs17av_new.iloc[:,z_cc].div(beta532molAv.iloc[:,z_cc]).mean(axis=1) 
+    rcs17atb = rcs17av_new.div(constk, axis=0)
     constk = rcs13av.iloc[:,z_cc].div(beta355molAv.iloc[:,z_cc]).mean(axis=1)
     rcs13atb = rcs13av.div(constk, axis=0)
     sr17 = rcs17atb.div(beta532molAv)
