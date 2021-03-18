@@ -1,0 +1,9 @@
+#PBS -e /homedata/nmpnguyen/IPRAL/logs_error1
+#PBS -o /homedata/nmpnguyen/IPRAL/logs1
+#PBS -N Ipral_1a
+#PBS -l mem=10gb 
+#PBS -l vmem=12gb
+
+source activate /homedata/nmpnguyen/python_envs/ipral_tools/
+cd /homedata/nmpnguyen/ipral-tools
+python processed.py 
