@@ -1,9 +1,11 @@
 #PBS -e /homedata/nmpnguyen/IPRAL/logs_error1
 #PBS -o /homedata/nmpnguyen/IPRAL/logs1
-#PBS -N Ipral_1a
-#PBS -l mem=10gb 
-#PBS -l vmem=12gb
+#PBS -N Ipral_RF
+#PBS -l mem=12gb 
+#PBS -l vmem=14gb
 
 source activate /homedata/nmpnguyen/python_envs/ipral_tools/
-cd /homedata/nmpnguyen/ipral-tools
-python processed.py 
+python /home/nmpnguyen/Codes/RF_Ipral_test3.py -top 4000 -bottom 3000 
+
+
+

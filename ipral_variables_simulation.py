@@ -5,7 +5,7 @@ from matplotlib import colors
 import xarray as xr
 from pathlib import Path
 import sys
-from argparse import Namespace, ArgumentParser
+# from argparse import Namespace, ArgumentParser
 # import click
 import numpy as np
 import pandas as pd
@@ -31,18 +31,17 @@ def variables_from_era(ipral_file):
     time = d.time.values
     YEAR = pd.to_datetime(time[0]).strftime('%Y')
     MONTH = pd.to_datetime(time[0]).strftime('%m')
-    lon_ipral = round(4*float(d.geospatial_lon_min))/4#round(float(d.geospatial_lon_min),2)
+    lon_ipral = round(4*float(d.geospatial_lon_min))/4 #round(float(d.geospatial_lon_min),2)
     lat_ipral = round(4*float(d.geospatial_lat_min))/4
     print(f'longitude: {lon_ipral}')
     print(f'latitude: {lat_ipral}')
     #----
     print('-----GET ERA5 FILE-----')
     ERA_FOLDER = Path("/bdd/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL")
+
     ERA_FILENAME = YEAR+MONTH+".ap1e5.GLOBAL_025.nc"
     GEOPT_PATH = ERA_FOLDER / YEAR / Path("geopt."+ERA_FILENAME)
     TA_PATH = ERA_FOLDER / YEAR / Path("ta."+ERA_FILENAME)
-    print(f'path of temperature {TA_PATH}')
-    print(f'path of geopotential {GEOPT_PATH}')
     geopt = xr.open_dataset(GEOPT_PATH)
     ta = xr.open_dataset(TA_PATH)
     #----
@@ -55,10 +54,28 @@ def variables_from_era(ipral_file):
     LAT = geopt.latitude[np.where(np.abs(geopt.latitude.values - lat_ipral) <=0.25)[0][1]].values
     LON = geopt.longitude[np.where(np.abs(geopt.longitude.values - lon_ipral) <=0.25)[0][1]].values
     #----
+    if pd.to_datetime(time[-1]).strftime('%m')==pd.to_datetime(time[0]).strftime('%m'):
+        print(f'path of temperature {TA_PATH}')
+        print(f'path of geopotential {GEOPT_PATH}')
+    else:
+        YEAR = pd.to_datetime(time[-1]).strftime('%Y')
+        MONTH = pd.to_datetime(time[-1]).strftime('%m')
+        ERA_FILENAME = YEAR+MONTH+".ap1e5.GLOBAL_025.nc"
+        GEOPT_PATH = [GEOPT_PATH, ERA_FOLDER / YEAR / Path("geopt."+ERA_FILENAME)]
+        TA_PATH = [TA_PATH, ERA_FOLDER / YEAR / Path("ta."+ERA_FILENAME)]
+        print(f'path of temperature {TA_PATH}')
+        print(f'path of geopotential {GEOPT_PATH}')
+        geopt1 = xr.open_dataset(GEOPT_PATH[1])
+        ta1 = xr.open_dataset(TA_PATH[1])
+        geopt = xr.concat([geopt, geopt1], dim='time')
+        ta = xr.concat([ta, ta1], dim='time')
+
+    print(geopt, ta)
     from timeit import default_timer as timer
-    TIME = timer()
-    geopt_for_ipral = geopt.sel(time=time_unique, latitude=LAT, longitude=LON).to_dataframe()#['geopt']
-    ta_for_ipral = ta.sel(time=time_unique, latitude=LAT, longitude=LON).to_dataframe()#['ta']
+    TIME = timer()    
+    geopt_for_ipral = geopt.sel(time=time_unique, latitude=LAT, longitude=LON)#.to_dataframe()#['geopt']
+    ta_for_ipral = ta.sel(time=time_unique, latitude=LAT, longitude=LON)#.to_dataframe()#['ta']
+    print(geopt_for_ipral, ta_for_ipral)
     print(f'Time loading {timer()-TIME}')
     #----
     print('-----GETTING PRESSURE AND TEMPERATURE-----')
@@ -75,6 +92,8 @@ def variables_from_era(ipral_file):
     p0 = 101325
     geopt_for_ipral['pression'] = p0*np.exp(const*geopt_for_ipral['altitude'])
     output_era = pd.merge(geopt_for_ipral, ta_for_ipral['ta'], left_index=True, right_index=True) 
+    # output_era = xr.merge([geopt_for_ipral, ta_for_ipral])
+    # output_era = output_era.to_dataframe()
     print('variables_from_era --> end')
     return output_era
 
@@ -88,8 +107,9 @@ def simulate_atb_mol(era):
     const532 = (5.45e-32/1.38e-23)*((532e-3/0.55)**(-4.09))
     era['beta355'] = const355*era['pression'].div(era['ta'])
     era['beta532'] = const532*era['pression'].div(era['ta'])
-    era['alpha355'] = era['beta355']/0.119
-    era['alpha532'] = era['beta532']/0.119
+    ratio = 0.119/3
+    era['alpha355'] = era['beta355']/ratio
+    era['alpha532'] = era['beta532']/ratio
     era = era.sort_index()
     level = np.unique(era.index.get_level_values(0))
     time = np.unique(era.index.get_level_values(1)) 
@@ -108,7 +128,7 @@ def simulate_atb_mol(era):
 
 
 import scipy.interpolate as spi
-def interpolate_atb_mol(ipral_file, era):     
+def interpolate_atb_mol(ipral_file, era, output):     
     """
     the Input is the output dataframe of simulate_atb_mol function
     """
@@ -127,7 +147,7 @@ def interpolate_atb_mol(ipral_file, era):
     new_index = pd.MultiIndex.from_product([timeIpral, r], names = ['time', 'range'])
     # df_new = pd.DataFrame(index = new_index, columns = era.columns)
     print('-----INTERPOLATE ATTENUATED BACKSCATTERING FROM ERA5-----')
-    for t1 in tdqm(time_tmp):
+    for t1 in tqdm(time_tmp):
         a = era.loc[pd.IndexSlice[:, t1], columns_names]
         f1 = spi.interp1d(a['altitude'], a['beta355mol'], kind = 'linear', bounds_error=False, fill_value="extrapolate")
         f2 = spi.interp1d(a['altitude'], a['beta532mol'], kind = 'linear', bounds_error=False, fill_value="extrapolate")
@@ -144,32 +164,39 @@ def interpolate_atb_mol(ipral_file, era):
         # alpha355_interp, alpha532_interp = np.append(alpha355_interp, np.array(f5(r))), np.append(alpha532_interp, np.array(f6(r)))
         # beta355_interp, beta532_interp = np.append(beta355_interp, np.array(f7(r))), np.append(beta532_interp, np.array(f8(r)))
         pression_interp, ta_interp = np.append(pression_interp, np.array(f9(r))), np.append(ta_interp, np.array(f10(r)))
-        print(str(t1))
+        # print(str(t1))
     #------
     new_df = pd.DataFrame(index = new_index, data = np.array([pression_interp, ta_interp ,beta355mol_interp ,beta532mol_interp]).T, columns = columns_names[1:])
     #, beta355_interp ,beta532_interp ,alpha355_interp ,alpha532_interp ,tau355_interp ,tau532_interp
-    new_df.to_pickle("/homedata/nmpnguyen/IPRAL/1a/"+ipral_file.name.split(".")[0]+"_simul.pkl")
+    #new_df.to_pickle("/homedata/nmpnguyen/IPRAL/1a/"+ipral_file.name.split(".")[0]+"_simul.pkl")
+    new_df.to_pickle(Path(output, ipral_file.name.split(".")[0]+"_simul.pkl"))
     print('interpolate_atb_mol --> end')
+    print(f"output filename: {Path(output, ipral_file.name.split('.')[0]+'_simul.pkl')}")
+    
     return new_df
 
 
-def simulate(ipral_file, option):
+def simulate(ipral_file):
     # if option == "era": 
     out = variables_from_era(ipral_file)
     era = simulate_atb_mol(out)
-    new_df = interpolate_atb_mol(ipral_file, era)
+    new_df = interpolate_atb_mol(ipral_file, era, output=Path("/homedata/nmpnguyen/IPRAL/RF/Simul/"))
     return new_df
     # else:
     #     return 0
 
-# ipral_file = Path('/bdd/SIRTA/pub/basesirta/1a/ipral/2020/01/21/ipral_1a_Lz1R15mF30sPbck_v01_20200121_000000_1440.nc')
-# simulate(ipral_file, 'era')
-# beta532mol = new_df['beta532mol'].unstack(level=1)
-# f, ax=plt.subplots()
-# # beta532mol.iloc[0,:].plot(kind="line", logx=True)
-# ax.semilogx(beta532mol.iloc[0,:], beta532mol.iloc[0,:].index)
-# plt.savefig("/homedata/nmpnguyen/IPRAL/1a_Fig/simul.png")
-# plt.close(f)
+
+#ipral_file = sorted(Path('/bdd/SIRTA/pub/basesirta/1a/ipral/2020/02/06/').glob('**/*_Lz1R15mF30sPbck_v01_*.nc'))
+### Ouvrir le fichier des jours sélectionés
+# with open('/homedata/nmpnguyen/ipral-tools/ClearSkyIprallist.txt', 'r') as f:
+#     all_data = [line.strip() for line in f.readlines()]
+    
+# metadata_line = all_data[:4]
+# listdays = all_data[4:]
+
+# for l in listdays:
+#   pf = list(Path('/bdd/SIRTA/pub/basesirta/1a/ipral/', l).glob('ipral_1a_Lz1R15mF30sPbck_v01_*.nc'))[0]
+#   simulate(pf, 'era')
 
 #__ get rs path corresponding to ipral data __
 """

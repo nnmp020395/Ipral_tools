@@ -105,8 +105,8 @@ for l in range(len(list_scc)):
     rcs1 = scc['range_corrected_signal'][1,:,:].values
     atm0 = scc['atmospheric_background'][0,:].values
     atm1 = scc['atmospheric_background'][1,:].values
-    scc0 = rcs0 - atm0.reshape((atm0.size,1))
-    scc1 = rcs1 - atm1.reshape((atm1.size,1))
+    scc0 = rcs0 #- atm0.reshape((atm0.size,1))
+    scc1 = rcs1 #- atm1.reshape((atm1.size,1))
     scc0Av = pd.DataFrame(scc0).groupby(np.arange(scc0.shape[1])//8, axis=1).mean().values
     scc1Av = pd.DataFrame(scc1).groupby(np.arange(scc1.shape[1])//8, axis=1).mean().values
     z_cc = np.where((alt[::8]>=4000)&(alt[::8]<=4200))[0]
@@ -135,10 +135,25 @@ for l in range(len(list_scc)):
     f1, axs = plt.subplots(ncols=4, nrows=4, figsize=(16,10))
     for n,ax in enumerate(axs.flatten()):
         ax.plot(rcs0[N[n],:], alt, label = '355:rcs')
-        ax.plot(scc0[N[n],:], alt, label = '355:rcs-atm')
+        # ax.plot(scc0[N[n],:], alt, label = '355:rcs-atm')
         ax.legend()
         ax.set(title=str(time[N[n]]))
 
     plt.suptitle(f'Range_corrected_signal - atmospheric_background \n {list_scc[0]}')
     plt.tight_layout()
     plt.savefig('/homedata/nmpnguyen/IPRAL/SCC_produits/rcs-atm'+fl.name.split('.')[0]+'.png')
+
+    print('Save as NetCDF')
+    ds = xr.Dataset(
+        {'atb_532': (('time', 'alt'), scc1calib),
+        'atb_355': (('time', 'alt'), scc0calib),
+        'atbmol_532': (('time','alt'), beta532molAv),
+        'atbmol_355': (('time', 'alt'), beta355molAv),
+        'rcs_532': (('time', 'alt'), scc1Av),
+        'rcs_355': (('time', 'alt'), scc0Av)
+        },
+        coords={
+            'time': time, 'alt': alt[::8]},
+    )
+    ds.to_netcdf(Path('/homedata/nmpnguyen/IPRAL/SCC_produits', fl.name.split('.')[0]+'_atb.nc'))
+

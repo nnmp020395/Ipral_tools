@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib import colors
+import matplotlib.colors as colors
 
 from pathlib import Path
 import sys
@@ -10,9 +10,10 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
-simul_file = Path("/homedata/nmpnguyen/IPRAL/1a/ipral_1a_Lz1R15mF30sPbck_v01_20200121_000000_1440_simul.pkl")
-ipral_file = Path("/homedata/nmpnguyen/IPRAL/1a/ipral_1a_bck_corrected_v01_20200121_000000_1440.nc")
-# sftp://nmpnguyen@camelot.ipsl.polytechnique.fr/mnt/sirtafs-2.5/lov/pub/basesirta/1a/ipral/2020/02/21/ipral_1a_Lz1R15mF30sPbck_v01_20200221_000000_1440.nc
+simul_file = Path("/homedata/nmpnguyen/IPRAL/1a/ipral_1a_Lz1R15mF30sPbck_v01_20200914_000000_1440_simul.pkl")
+ipral_file = Path("/bdd/SIRTA/pub/basesirta/1a/ipral/2020/09/14/ipral_1a_Lz1R15mF30sPbck_v01_20200914_000000_1440.nc")
+# "/homedata/nmpnguyen/IPRAL/1a/ipral_1a_bck_corrected_v01_20200121_000000_1440.nc"
+# sftp://nmpnguyen@camelot.ipsl.polytechnique.fr/mnt/sirtafs-2.5/lov/
 print(simul_file, ipral_file)
 def get_calib_plot(rcs17atb, beta532molAv, rcs13atb, beta355molAv, time, rAv, ipral_file, wave):
     N = np.int_(np.linspace(0, len(time)-1, 16))
@@ -33,9 +34,10 @@ def get_calib_plot(rcs17atb, beta532molAv, rcs13atb, beta355molAv, time, rAv, ip
         plt.suptitle(str(ipral_file.name)+'\n Attenuated Backscatter Profile')
         plt.tight_layout()        
         out_png = Path('/homedata/nmpnguyen/IPRAL/1a_Fig', ipral_file.stem + '_355sr.png')
+        plt.savefig(out_png)
     else:
         for m, ax in enumerate(axs.flatten()):
-            sr = rcs17atb.iloc[N[m],:rplot.shape[0]]/beta532molAv.iloc[N[m],:rplot.shape[0]]
+            sr = rcs17atb.iloc[N[m],:rplot.shape[0]].values/beta532molAv.iloc[N[m],:rplot.shape[0]].values
             ax.plot(sr, rplot, label="SR 532nm")
             ax.vlines(1, ymin=rplot[0], ymax=rplot[-1], linestyles='--', color="red", zorder=10)
             # ax.plot(rcs17atb.iloc[N[m],:rplot.shape[0]], rplot, label="ATB 532nm")
@@ -45,10 +47,19 @@ def get_calib_plot(rcs17atb, beta532molAv, rcs13atb, beta355molAv, time, rAv, ip
             ax.legend()
             # ax.set_ylim(0, 20000)
         # plt.gca().set_xlim(left=0)
-        plt.suptitle(str(ipral_file.name)+'\n Attenuated Backscatter Profile')
+        plt.suptitle(str(ipral_file.name)+'\n Scattering Ratio profiles')
         plt.tight_layout()
         out_png = Path('/homedata/nmpnguyen/IPRAL/1a_Fig', ipral_file.stem + '_532sr.png')
-    plt.savefig(out_png)
+        plt.savefig(out_png)
+        # plot quicklook atb    
+        fig, ax = plt.subplots()
+        p = ax.pcolormesh(time, rAv, rcs17atb.T, norm=colors.LogNorm(vmin=10e-9, vmax=10e-6), cmap = 'RdBu_r', shading='nearest')
+        plt.colorbar(p, ax=ax)
+        ax.set_ylim(0,20000)
+        plt.suptitle(str(ipral_file.name)+'\n Attenuated Backscatter Quicklook')
+        plt.tight_layout()
+        out_png = Path('/homedata/nmpnguyen/IPRAL/1a_Fig', ipral_file.stem + '_532atbQL.png')
+        plt.savefig(out_png)
 
 """
 Fontionc init et add sont pour détecter le pic du signal, donc détecter les nuages, aérosols
@@ -153,7 +164,7 @@ def get_calibration(ipral_file, simul_df):
     rAv = r[::8]
     print('AVERAGE-------------------------------end')
     # PEAK DETECTION
-    r_id = np.where(rAv <= 5000)[0]
+    r_id = np.where(rAv <= 4000)[0]
     time_mask = []
     id_mask = []
     for t in range(time.size):
@@ -166,12 +177,14 @@ def get_calibration(ipral_file, simul_df):
         for line in profil1:
             result = add(result, line, lag, threshold, influence)
         if (len(np.where(result['labels']==1)[0]) != 0):
-            print(time[t])
             time_mask.append(time[t])
             id_mask.append(t)
     #---------        
+    print(f'time index of peak detected: {id_mask}')
     rcs17av_new = np.array(rcs17av, copy=True)
     rcs17av_new[id_mask,:] = np.nan
+    rcs17av_new = pd.DataFrame(rcs17av_new, index = time, columns=rAv)
+    print('PEAK DETECTION-------------------------end')
     # NORMALIZATION-------------------------
     z_cc = np.where((rAv>3700)&(rAv<4000))[0]
     constk = rcs17av_new.iloc[:,z_cc].div(beta532molAv.iloc[:,z_cc]).mean(axis=1) 
@@ -187,7 +200,9 @@ def get_calibration(ipral_file, simul_df):
         {'atb_17': (('time', 'range'), rcs17atb.values),
         'atb_13': (('time', 'range'), rcs13atb.values),
         'atbmol_17': (('time','range'), beta532molAv.values),
-        'atbmol_13': (('time', 'range'), beta355molAv.values)},
+        'atbmol_13': (('time', 'range'), beta355molAv.values),
+        'rcs_17': (('time', 'range'), rcs17av),
+        'rcs_13': (('time', 'range'), rcs13av)},
         coords={
             'time': time, 'range': rAv},
     )
@@ -196,7 +211,7 @@ def get_calibration(ipral_file, simul_df):
     # return r, rcs17atb, rcs13atb, sr17, sr13, beta355mol, beta532mol, time
 
 
-# get_calibration(ipral_file, pd.read_pickle(simul_file))
+get_calibration(ipral_file, pd.read_pickle(simul_file))
 
 
 # ax[0].vlines(1, ymin=0, ymax=20000, linestyles="--", color="red", zorder=10)
